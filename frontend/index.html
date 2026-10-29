@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f0">
+  <title>ShopSphere | Goods for everyday</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      color-scheme: light;
+      --ink: #202b25;
+      --muted: #68746d;
+      --paper: #f6f5f0;
+      --white: #fffefa;
+      --green: #2d6549;
+      --line: #e4e5dc;
+      font-family: "DM Sans", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); }
+    header {
+      height: 72px;
+      padding: 0 max(6vw, 24px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { font: 800 21px "Manrope", sans-serif; letter-spacing: 0; }
+    .brand span { color: var(--green); }
+    .header-note { color: var(--muted); font-size: 13px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 68px 28px 80px; }
+    .intro { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 34px; }
+    .eyebrow { color: var(--green); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; }
+    h1 { margin: 10px 0 8px; font: 700 42px/1.12 "Manrope", sans-serif; letter-spacing: 0; }
+    .intro p { margin: 0; color: var(--muted); font-size: 15px; }
+    .count { color: var(--muted); font-size: 13px; white-space: nowrap; padding-bottom: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); gap: 16px; }
+    .product { overflow: hidden; background: var(--white); border: 1px solid var(--line); border-radius: 6px; animation: appear .35s ease both; }
+    .product-art { min-height: 168px; display: grid; place-items: center; background: var(--art-bg, #e7eee5); }
+    .product-art span { font-size: 64px; line-height: 1; }
+    .product-info { padding: 17px 18px 19px; }
+    .category { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; }
+    .product h2 { margin: 7px 0 13px; font: 600 16px "Manrope", sans-serif; letter-spacing: 0; }
+    .price { color: var(--green); font-size: 14px; font-weight: 700; }
+    .message { grid-column: 1 / -1; padding: 28px; color: var(--muted); background: var(--white); border: 1px solid var(--line); border-radius: 6px; }
+    @keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 600px) {
+      header { height: 62px; }
+      .header-note { font-size: 12px; }
+      main { padding: 48px 20px 56px; }
+      .intro { align-items: start; flex-direction: column; gap: 14px; }
+      h1 { font-size: 34px; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .product-art { min-height: 132px; }
+      .product-art span { font-size: 52px; }
+      .product-info { padding: 14px 12px 16px; }
+      .product h2 { font-size: 14px; }
+    }
+    @media (max-width: 360px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">shop<span>sphere</span></div>
+    <div class="header-note">Thoughtful finds, made simple</div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">The everyday edit</div>
+        <h1 id="page-title">Good things, well chosen.</h1>
+        <p>A few useful favorites for wherever the day takes you.</p>
+      </div>
+      <div class="count" id="product-count" aria-live="polite">Loading products...</div>
+    </section>
+    <section class="grid" id="products" aria-label="Products"></section>
+  </main>
+  <script>
+    const art = ["🎒", "☕", "🎧", "👜"];
+    const colors = ["#e1eadf", "#f1e7d8", "#e2e8eb", "#f0e2d9"];
+    const productGrid = document.querySelector("#products");
+    const productCount = document.querySelector("#product-count");
+
+    fetch("/api/products")
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load products");
+        return response.json();
+      })
+      .then((products) => {
+        productCount.textContent = `${products.length} products`;
+        if (products.length === 0) {
+          productGrid.innerHTML = '<p class="message">There are no products to show yet.</p>';
+          return;
+        }
+        productGrid.innerHTML = products.map((product, index) => `
+          <article class="product" style="animation-delay:${index * 60}ms">
+            <div class="product-art" style="--art-bg:${colors[index % colors.length]}" aria-hidden="true"><span>${art[index % art.length]}</span></div>
+            <div class="product-info">
+              <div class="category">${product.category}</div>
+              <h2>${product.name}</h2>
+              <div class="price">$${Number(product.price).toFixed(2)}</div>
+            </div>
+          </article>
+        `).join("");
+      })
+      .catch(() => {
+        productCount.textContent = "Catalog unavailable";
+        productGrid.innerHTML = '<p class="message">We could not load the catalog. Please try again shortly.</p>';
+      });
+  </script>
+</body>
+</html>
