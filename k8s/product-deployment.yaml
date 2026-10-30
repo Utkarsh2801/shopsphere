@@ -1,21 +1,80 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: product-service
   namespace: shopsphere
+
 spec:
   replicas: 3
+
   selector:
     matchLabels:
       app: product-service
+
   template:
     metadata:
       labels:
         app: product-service
+
     spec:
       containers:
-      - name: product-service
-        image: shopsphere-product:v1
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8000
+        - name: product-service
+          image: shopsphere-product:v3
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8000
+
+          env:
+            - name: DB_HOST
+              value: postgres
+
+            - name: DB_PORT
+              value: "5432"
+
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: database
+
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: username
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-auth
+                  key: password
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 12
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            periodSeconds: 5
+            timeoutSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
