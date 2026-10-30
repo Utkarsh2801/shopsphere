@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-service
+  namespace: shopsphere
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: cart-service}
+  template:
+    metadata:
+      labels: {app: cart-service}
+    spec:
+      containers:
+      - name: cart-service
+        image: shopsphere-cart:v1
+        imagePullPolicy: IfNotPresent
+        ports: [{containerPort: 8001}]
+        envFrom:
+        - configMapRef: {name: cart-order-config}
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: username}
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: password}
+        readinessProbe:
+          httpGet: {path: /ready, port: 8001}
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: {path: /health, port: 8001}
+          periodSeconds: 10
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service
+  namespace: shopsphere
+spec:
+  selector: {app: cart-service}
+  ports:
+  - {port: 8001, targetPort: 8001}

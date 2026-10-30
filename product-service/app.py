@@ -44,7 +44,7 @@ class ProductHandler(BaseHTTPRequestHandler):
                     503, {"status": "database unavailable"}
                 )
 
-        if self.path == "/api/products":
+        if self.path == "/aZZpi/products":
             try:
                 with get_connection() as conn:
                     with conn.cursor(row_factory=dict_row) as cur:

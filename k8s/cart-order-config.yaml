@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cart-order-config
+  namespace: shopsphere
+data:
+  DB_HOST: postgres
+  DB_NAME: shopsphere
+  CART_URL: http://cart-service:8001
+  PRODUCT_URL: http://product-service:5000/api
+  HTTP_TIMEOUT_SECONDS: "3"

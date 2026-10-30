@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cart-order-schema
+  namespace: shopsphere
+data:
+  schema.sql: |
+    BEGIN;
+    CREATE TABLE IF NOT EXISTS cart_items (
+      customer_id VARCHAR(50) NOT NULL,
+      product_id BIGINT NOT NULL,
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      PRIMARY KEY (customer_id, product_id)
+    );
+    CREATE TABLE IF NOT EXISTS orders (
+      id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      customer_id VARCHAR(50) NOT NULL,
+      total_price BIGINT NOT NULL CHECK (total_price >= 0),
+      status VARCHAR(32) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS order_items (
+      order_id BIGINT NOT NULL REFERENCES orders(id),
+      product_id BIGINT NOT NULL,
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      unit_price BIGINT NOT NULL CHECK (unit_price >= 0),
+      PRIMARY KEY (order_id, product_id)
+    );
+    COMMIT;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cart-order-schema-v1
+  namespace: shopsphere
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: migrate
+        image: postgres:16
+        command: ["sh", "-ec", "psql -v ON_ERROR_STOP=1 -h postgres -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /schema/schema.sql"]
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: username}
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: password}
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: database}
+        volumeMounts:
+        - name: schema
+          mountPath: /schema
+      volumes:
+      - name: schema
+        configMap: {name: cart-order-schema}
