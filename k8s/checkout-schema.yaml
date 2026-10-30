@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-schema
+  namespace: shopsphere
+data:
+  schema.sql: |
+    BEGIN;
+    CREATE TABLE IF NOT EXISTS checkout_keys (
+      customer_id VARCHAR(50) NOT NULL,
+      key VARCHAR(100) NOT NULL,
+      order_id BIGINT UNIQUE REFERENCES orders(id),
+      PRIMARY KEY (customer_id, key)
+    );
+    COMMIT;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: checkout-schema-v1
+  namespace: shopsphere
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: migrate
+        image: postgres:16
+        command: ["sh", "-ec", "psql -v ON_ERROR_STOP=1 -h postgres -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /schema/schema.sql"]
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: username}
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: password}
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef: {name: postgres-auth, key: database}
+        volumeMounts:
+        - name: schema
+          mountPath: /schema
+      volumes:
+      - name: schema
+        configMap: {name: checkout-schema}
