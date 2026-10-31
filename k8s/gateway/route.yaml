@@ -1,0 +1,37 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shopsphere-route
+  namespace: shopsphere
+spec:
+  parentRefs:
+    - name: shopsphere-gateway
+      sectionName: https
+  hostnames:
+    - shopsphere.test
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shopsphere-https-redirect
+  namespace: shopsphere
+spec:
+  parentRefs:
+    - name: shopsphere-gateway
+      sectionName: http
+  hostnames:
+    - shopsphere.test
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
