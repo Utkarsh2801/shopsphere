@@ -1,0 +1,23 @@
+
+name: product-gitops
+
+replicaCount: 1
+
+image:
+  repository: shopsphere-product
+  tag: v4
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+database:
+  host: postgres
+  secretName: postgres-auth

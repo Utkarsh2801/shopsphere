@@ -14,8 +14,12 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchLabels:
-              app: product-service
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - product-service
+                  - product-gitops
         - podSelector:
             matchLabels:
               app: cart-service
