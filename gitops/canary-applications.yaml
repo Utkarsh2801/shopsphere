@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: shopsphere-canary
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Utkarsh2801/shopsphere.git
+    targetRevision: main
+    path: helm/shopsphere-api
+    helm:
+      releaseName: shopsphere-canary
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: shopsphere
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: false
+      selfHeal: true

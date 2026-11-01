@@ -4,8 +4,8 @@ name: product-gitops
 replicaCount: 1
 
 image:
-  repository: shopsphere-product
-  tag: v4
+  repository: ghcr.io/utkarsh2801/shopsphere-product
+  tag: sha-c11c5b08797e402e8d54e5e913724a5edb181466
   pullPolicy: IfNotPresent
 
 service:
