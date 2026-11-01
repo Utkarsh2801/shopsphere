@@ -28,12 +28,15 @@ spec:
 
       containers:
         - name: product-service
-          image: shopsphere-product:v3
+          image: shopsphere-product:v4
           imagePullPolicy: IfNotPresent
 
           ports:
             - name: http
               containerPort: 8000
+            
+            - name: metrics
+              containerPort: 9090
 
           env:
             - name: DB_HOST

@@ -4,8 +4,30 @@ import os
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import time
+
+from prometheus_client import (
+    Counter,
+    Histogram,
+    start_http_server,
+)
+
 import psycopg
 from psycopg.rows import dict_row
+
+HTTP_REQUESTS = Counter(
+    "shopsphere_http_requests_total",
+    "Total HTTP responses",
+    ["method", "route", "status"],
+)
+
+HTTP_LATENCY = Histogram(
+    "shopsphere_http_request_duration_seconds",
+    "Time spent handling HTTP requests",
+    ["method", "route"],
+    buckets=(0.005, 0.01, 0.025, 0.05,
+             0.1, 0.25, 0.5, 1, 2, 5),
+)
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "postgres"),
@@ -21,8 +43,36 @@ def get_connection():
     return psycopg.connect(**DB_CONFIG)
 
 
+def observe_request(handler_func):
+    def wrapped(self):
+        started = time.monotonic()
+        try:
+            return handler_func(self)
+        finally:
+            route = (
+                self.path.split("?")[0]
+                if self.path.split("?")[0]
+                in ("/api/products", "/health", "/ready")
+                else "other"
+            )
+            HTTP_LATENCY.labels(
+                self.command, route
+            ).observe(time.monotonic() - started)
+
+    return wrapped
+
 class ProductHandler(BaseHTTPRequestHandler):
     def send_json(self, status, data):
+        route = self.path.split("?")[0]
+        if route not in ("/api/products", "/health", "/ready"):
+            route = "other"
+
+        HTTP_REQUESTS.labels(
+            method=self.command,
+            route=route,
+            status=str(status),
+        ).inc()
+
         body = json.dumps(data, default=str).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -44,7 +94,7 @@ class ProductHandler(BaseHTTPRequestHandler):
                     503, {"status": "database unavailable"}
                 )
 
-        if self.path == "/aZZpi/products":
+        if self.path == "/api/products":
             try:
                 with get_connection() as conn:
                     with conn.cursor(row_factory=dict_row) as cur:
@@ -119,5 +169,14 @@ class ProductHandler(BaseHTTPRequestHandler):
 
 
 print("Starting ShopSphere Product API...", flush=True)
+
+ProductHandler.do_GET = observe_request(
+    ProductHandler.do_GET
+)
+ProductHandler.do_POST = observe_request(
+    ProductHandler.do_POST
+)
+
+start_http_server(9090)
 
 HTTPServer(("0.0.0.0", 8000), ProductHandler).serve_forever()
