@@ -5,7 +5,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/utkarsh2801/shopsphere-product
-  tag: sha-9ada294ad22be8655ec1a2008cb7e462f10fad6f
+  tag: sha-e34b4853d017a3350f3f70edf7849c11a30ce00b
   pullPolicy: Always
 
 service:
