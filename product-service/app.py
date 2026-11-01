@@ -104,7 +104,7 @@ class ProductHandler(BaseHTTPRequestHandler):
                         )
                         products = cur.fetchall()
 
-                return self.send_json(200, products)
+                return self.send_json(200, [])
             except psycopg.Error as error:
                 print(f"Database error: {error}", flush=True)
                 return self.send_json(

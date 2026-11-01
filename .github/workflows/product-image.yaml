@@ -1,6 +1,10 @@
 
 name: Build Product API
 
+concurrency:
+  group: product-image-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   push:
     branches: [main]
@@ -11,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -52,3 +56,31 @@ jobs:
           tags: |
             ghcr.io/${{ steps.image.outputs.owner }}/shopsphere-product:sha-${{ github.sha }}
             ghcr.io/${{ steps.image.outputs.owner }}/shopsphere-product:main
+
+      - name: Update Helm image tag
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          values_file = Path("helm/shopsphere-api/values.yaml")
+          lines = values_file.read_text().splitlines(keepends=True)
+          tag_lines = [index for index, line in enumerate(lines) if line.startswith("  tag: ")]
+          if len(tag_lines) != 1:
+              raise SystemExit("Expected exactly one Helm image tag")
+
+          lines[tag_lines[0]] = f"  tag: {os.environ['IMAGE_TAG']}\n"
+          values_file.write_text("".join(lines))
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add helm/shopsphere-api/values.yaml
+          if git diff --cached --quiet; then
+            echo "Helm image tag is already up to date"
+            exit 0
+          fi
+          git commit -m "Deploy product image ${IMAGE_TAG}"
+          git push
